@@ -51,7 +51,9 @@ def check_valid_ptr_records(df):
 
     df['Valid_PTR'] = df.apply(lambda row: (row['First Octet'] not in row['PTR'] and
                                         'resolution' not in row['PTR'] and
-                                        row['Last Octet'] not in row['PTR']), axis=1)
+                                        row['Last Octet'] not in row['PTR'] and
+                                        'Resolver' not in row['PTR']
+                                        ), axis=1)
 
 
 
