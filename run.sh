@@ -3,13 +3,20 @@
 # 定义一个函数来执行命令并记录时间
 run_command() {
     start_time=$(date +%s) # 获取开始时间
-    echo "Running command: $1"
-    $1 # 执行命令
+    command=$1
+    if [[ $sni == true ]]; then
+        command="$command -sni true"
+    fi
+    echo "Running command: $command"
+    $command # 执行命令
     end_time=$(date +%s) # 获取结束时间
 
     echo "Execution time for '$1': $((end_time - start_time)) seconds"
     echo "-------------------------------------"
 }
+
+sni=$1
+
 #./doq [infile] [outfile] [certfile]
 # 执行命令并记录时间
 run_command "./doq -port 8853 ../../data/20240505/alive/8853.csv ../../data/20240505/results/port8853.csv ../../data/20240505/certs-1/8853.csv"
