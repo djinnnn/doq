@@ -116,7 +116,8 @@ func main() {
 
 	args := flag.Args()
 	if len(args) != 3 {
-		println("need 2 arguments: [in file] [out file] [cert file]")
+		println("need 3 arguments: [in file] [out file] [cert file]")
+		println("now only get ", len(args))
 		os.Exit(1)
 	}
 
