@@ -47,7 +47,7 @@ var DefaultQUICVersions = []quic.VersionNumber{
 	quic.Version2,
 }
 
-func establishConnection(ip net.IP, domain string, certWriter, errorWriter *csv.Writer) bool {
+func establishConnection(ip net.IP, port, domain string, certWriter, errorWriter *csv.Writer) bool {
 	log.Printf("Starting connection attempt for IP: %s with domain: %s", ip, domain)
 	defer log.Printf("Ending connection attempt for IP: %s", ip)
 	tlsConf := &tls.Config{
@@ -64,72 +64,75 @@ func establishConnection(ip net.IP, domain string, certWriter, errorWriter *csv.
 		Versions:             DefaultQUICVersions,
 	}
 
-	var ports = []string{*port}
+	//var ports = []string{*port}
 	reachable := make(chan bool)
 	go func() {
-		for _, port := range ports {
-			log.Println("port:%s", port)
-			session, err := quic.DialAddr(context.Background(), ip.String()+":"+port, tlsConf, quicConf)
-			if err != nil {
-				log.Printf("Failed to establish QUIC connection to %s:%s: %v", ip, port, err)
-				mutex.Lock()
-				if err := errorWriter.Write([]string{ip.String(), domain, "", "", err.Error()}); err != nil {
-					log.Printf("Failed to write error to CSV: %v", err)
-				}
-				errorWriter.Flush()
-				mutex.Unlock()
-				continue
+		//for _, port := range ports {
+		log.Println("port:%s", port)
+		session, err := quic.DialAddr(context.Background(), ip.String()+":"+port, tlsConf, quicConf)
+		if err != nil {
+			log.Printf("Failed to establish QUIC connection to %s:%s: %v", ip, port, err)
+			mutex.Lock()
+			if err := errorWriter.Write([]string{ip.String(), port, domain, "", "", err.Error()}); err != nil {
+				log.Printf("Failed to write error to CSV: %v", err)
 			}
-
-			// Access TLS connection state
-			tlsState := session.ConnectionState().TLS
-			doqVersion := "unknown"
-			tlsVersion := "unknown"
-
-			if len(tlsState.NegotiatedProtocol) > 0 {
-				doqVersion = tlsState.NegotiatedProtocol
-			}
-
-			switch tlsState.Version {
-			case tls.VersionTLS13:
-				tlsVersion = "TLS 1.3"
-			case tls.VersionTLS12:
-				tlsVersion = "TLS 1.2"
-			case tls.VersionTLS11:
-				tlsVersion = "TLS 1.1"
-			case tls.VersionTLS10:
-				tlsVersion = "TLS 1.0"
-			default:
-				tlsVersion = "unknown"
-			}
-
-			if len(tlsState.PeerCertificates) > 0 {
-				for _, cert := range tlsState.PeerCertificates {
-					pemBlock := &pem.Block{
-						Type:  "CERTIFICATE",
-						Bytes: cert.Raw,
-					}
-					pemBytes := pem.EncodeToMemory(pemBlock)
-					if pemBytes == nil {
-						log.Println("Failed to encode certificate to PEM")
-						continue
-					}
-					mutex.Lock()
-					if err := certWriter.Write([]string{ip.String(), domain, doqVersion, tlsVersion, string(pemBytes)}); err != nil {
-						log.Printf("Failed to write to CSV: %v", err)
-					}
-					certWriter.Flush()
-					mutex.Unlock()
-				}
-			} else {
-				log.Printf("No peer certificates found for IP: %s", ip)
-			}
-
-			reachable <- true
-			session.CloseWithError(0, "")
+			errorWriter.Flush()
+			mutex.Unlock()
+			//continue
+			//这里将continue修改了，因为并不会尝试多个端口
+			reachable <- false
 			return
 		}
-		reachable <- false
+
+		// Access TLS connection state
+		tlsState := session.ConnectionState().TLS
+		doqVersion := "unknown"
+		tlsVersion := "unknown"
+
+		if len(tlsState.NegotiatedProtocol) > 0 {
+			doqVersion = tlsState.NegotiatedProtocol
+		}
+
+		switch tlsState.Version {
+		case tls.VersionTLS13:
+			tlsVersion = "TLS 1.3"
+		case tls.VersionTLS12:
+			tlsVersion = "TLS 1.2"
+		case tls.VersionTLS11:
+			tlsVersion = "TLS 1.1"
+		case tls.VersionTLS10:
+			tlsVersion = "TLS 1.0"
+		default:
+			tlsVersion = "unknown"
+		}
+
+		if len(tlsState.PeerCertificates) > 0 {
+			for _, cert := range tlsState.PeerCertificates {
+				pemBlock := &pem.Block{
+					Type:  "CERTIFICATE",
+					Bytes: cert.Raw,
+				}
+				pemBytes := pem.EncodeToMemory(pemBlock)
+				if pemBytes == nil {
+					log.Println("Failed to encode certificate to PEM")
+					continue
+				}
+				mutex.Lock()
+				if err := certWriter.Write([]string{ip.String(), port, domain, doqVersion, tlsVersion, string(pemBytes)}); err != nil {
+					log.Printf("Failed to write to CSV: %v", err)
+				}
+				certWriter.Flush()
+				mutex.Unlock()
+			}
+		} else {
+			log.Printf("No peer certificates found for IP: %s", ip)
+		}
+
+		reachable <- true
+		session.CloseWithError(0, "")
+		//return
+		//}
+		//reachable <- false
 	}()
 	return <-reachable
 }
@@ -191,21 +194,28 @@ func main() {
 	for scanner.Scan() {
 		line := scanner.Text()
 		var ip net.IP
-		var domain string
+		var port, domain string
+		
+		parts := strings.Split(line, ",")
+		ip = net.ParseIP(parts[0])
+		port = parts[1]
 
 		if *useSNI {
+			parts := strings.Split(line, ",")
+			if len(parts) != 3 {
+				log.Println("Skipping invalid line:", line)
+				continue
+			}
+			domain = parts[2]
+		} else {
 			parts := strings.Split(line, ",")
 			if len(parts) != 2 {
 				log.Println("Skipping invalid line:", line)
 				continue
 			}
-
-			ip = net.ParseIP(parts[0])
-			domain = parts[1]
-		} else {
-			ip = net.ParseIP(line)
 			domain = ""
 		}
+
 
 		if ip == nil {
 			log.Println("Invalid IP address:", line)
@@ -213,16 +223,16 @@ func main() {
 		}
 		sem.Acquire(context.Background(), 1)
 		wg.Add(1)
-		go func(ip net.IP, domain string) {
-			reachable := establishConnection(ip, domain, certWriter, errorWriter)
+		go func(ip net.IP, port, domain string) {
+			reachable := establishConnection(ip, port, domain, certWriter, errorWriter)
 			if reachable {
-				if _, err := outFile.WriteString(ip.String() + " " + domain + "\n"); err != nil {
+				if _, err := outFile.WriteString(ip.String() + "," + port + "," + domain + "\n"); err != nil {
 					log.Println(err)
 				}
 			}
 			sem.Release(1)
 			wg.Done()
-		}(ip, domain)
+		}(ip, port, domain)
 	}
 
 	wg.Wait()
