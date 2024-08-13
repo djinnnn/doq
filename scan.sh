@@ -3,7 +3,7 @@
 # 定义变量
 echo "Starting read input files"
 DATA_DIR_PATH='/home/lcl/wy/Projects/DoQ/data/20240701/ports_2'
-INPUT_FILE='/home/lcl/wy/Projects/DoQ/data/20240701/ports_2/shard_7.csv'
+INPUT_FILE='/home/lcl/wy/Projects/DoQ/data/20240701/ports_2/shard_6.csv'
 #INPUT_FILE='/home/lcl/wy/Projects/DoQ/data/20240701/ports_2/test.csv'
 NUM_PARTS=7
 LOG_DIRECTORY="$DATA_DIR_PATH/scan_logs"
