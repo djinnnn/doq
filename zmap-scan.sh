@@ -22,6 +22,7 @@ for ((i=0; i<NUM_SHARDS; i++)); do
 
     # 执行 zmap 扫描
     SCAN_COMMAND="sudo zmap --seed 20240813 --shards 84 --shard $SHARD -M udp -p 853 --probe-args=file:initial_qscanner_1a1a1a1a.pkt 0.0.0.0/0 -o $OUTPUT_FILE -B 5M"
+    echo "$SCAN_COMMAND"
     eval "$SCAN_COMMAND" 2>&1 | tail -n 10 -f >> "$LOG_FILE" &
 
     wait $!
