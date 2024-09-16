@@ -5,7 +5,7 @@ START_SHARD=$1
 
 # 定义常量
 NUM_SHARDS=14
-LOG_DIRECTORY="/home/lcl/wy/Projects/DoQ/data/20240813/scan_logs"
+LOG_DIRECTORY="/home/lcl/wy/Projects/DoQ/data/20240916/scan_logs"
 
 # 创建日志目录（如果不存在）
 mkdir -p "$LOG_DIRECTORY"
@@ -21,7 +21,7 @@ for ((i=0; i<NUM_SHARDS; i++)); do
     echo "Starting scan for shard $SHARD"
 
     # 执行 zmap 扫描
-    SCAN_COMMAND="sudo zmap --seed 20240813 --shards 84 --shard $SHARD -M udp -p 853 --probe-args=file:initial_qscanner_1a1a1a1a.pkt 0.0.0.0/0 -o $OUTPUT_FILE -B 5M"
+    SCAN_COMMAND="sudo zmap --seed 20240916 --shards 84 --shard $SHARD -M udp -p 853 --probe-args=file:initial_qscanner_1a1a1a1a.pkt 0.0.0.0/0 -o $OUTPUT_FILE -B 5M"
     echo "$SCAN_COMMAND"
     eval "$SCAN_COMMAND" 2>&1 | tail -n 10 -f >> "$LOG_FILE" &
 
