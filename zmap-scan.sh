@@ -14,7 +14,7 @@ mkdir -p "$LOG_DIRECTORY"
 for ((i=0; i<NUM_SHARDS; i++)); do
     SHARD=$((START_SHARD * NUM_SHARDS + i))
     LOG_FILE="$LOG_DIRECTORY/segment_${SHARD}_log.txt"
-    OUTPUT_FILE="/home/lcl/wy/Projects/DoQ/data/20240813/ports/20240813_${SHARD}_ports.csv"
+    OUTPUT_FILE="/home/lcl/wy/Projects/DoQ/data/20240916/ports/20240916_${SHARD}_ports.csv"
     
     echo "Starting scan for shard $SHARD" > "$LOG_FILE"
     echo "Scan started at $(date '+%Y-%m-%d %H:%M:%S')" >> "$LOG_FILE"
