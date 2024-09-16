@@ -48,6 +48,7 @@ var DefaultQUICVersions = []quic.VersionNumber{
 }
 
 func establishConnection(ip net.IP, port, domain string, certWriter, errorWriter *csv.Writer) bool {
+	
 	log.Printf("Starting connection attempt for IP: %s with domain: %s", ip, domain)
 	defer log.Printf("Ending connection attempt for IP: %s", ip)
 	tlsConf := &tls.Config{
@@ -69,7 +70,14 @@ func establishConnection(ip net.IP, port, domain string, certWriter, errorWriter
 	go func() {
 		//for _, port := range ports {
 		log.Println("port:%s", port)
-		session, err := quic.DialAddr(context.Background(), ip.String()+":"+port, tlsConf, quicConf)
+		ipStr := ip.String()+":"+port
+
+		if ip.To4() == nil { // This is an IPv6 address
+			ipStr = "[" + ip.String() + "]:"+port
+		
+		}
+		session, err := quic.DialAddr(context.Background(), ipStr , tlsConf, quicConf)
+
 		if err != nil {
 			log.Printf("Failed to establish QUIC connection to %s:%s: %v", ip, port, err)
 			mutex.Lock()
